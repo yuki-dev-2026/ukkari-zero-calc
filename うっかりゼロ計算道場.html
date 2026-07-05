@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>うっかりゼロ計算道場</title>
+<style>
+  :root {
+    --main: #3a6ea5;
+    --main-dark: #2c5480;
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --ok: #2e9e5b;
+    --ng: #d9534f;
+    --text: #2b2f36;
+    --sub: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+    color: var(--text);
+  }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 16px 16px 40px;
+  }
+  h1 {
+    font-size: 22px;
+    text-align: center;
+    margin: 12px 0 4px;
+    color: var(--main-dark);
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--sub);
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .checklist-title {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: var(--main-dark);
+  }
+  .checklist ul { margin: 0; padding-left: 20px; font-size: 13px; color: var(--text); line-height: 1.8; }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .cat-btn {
+    background: #eef3fa;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    padding: 14px 8px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .15s;
+    user-select: none;
+  }
+  .cat-btn .emoji { font-size: 26px; display: block; margin-bottom: 4px; }
+  .cat-btn.selected {
+    border-color: var(--main);
+    background: #dfeaf9;
+    font-weight: bold;
+  }
+  .cat-btn .weak-badge {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 10px;
+    background: #ffe1e1;
+    color: var(--ng);
+    border-radius: 8px;
+    padding: 1px 6px;
+  }
+  .count-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .count-btn {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    border-radius: 10px;
+    background: #eef3fa;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .count-btn.selected {
+    background: var(--main);
+    color: #fff;
+    font-weight: bold;
+  }
+  .big-btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    background: var(--main);
+    color: #fff;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  .big-btn:disabled {
+    background: #c3cbd6;
+    cursor: not-allowed;
+  }
+  .big-btn.secondary {
+    background: #eef3fa;
+    color: var(--main-dark);
+  }
+  .progress-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--sub);
+    margin-bottom: 6px;
+  }
+  .progress-bar-bg {
+    height: 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--main);
+    transition: width .2s;
+  }
+  .question-box {
+    text-align: center;
+    padding: 28px 10px;
+  }
+  .question-text {
+    font-size: 30px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 22px;
+    word-break: break-word;
+  }
+  .answer-input {
+    width: 100%;
+    font-size: 22px;
+    text-align: center;
+    padding: 12px;
+    border: 2px solid #d0d7e2;
+    border-radius: 12px;
+    outline: none;
+  }
+  .answer-input:focus { border-color: var(--main); }
+  .answer-input.correct { border-color: var(--ok); background: #eafaf0; }
+  .answer-input.wrong { border-color: var(--ng); background: #fdecec; }
+  .feedback {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: left;
+  }
+  .feedback.ok { background: #eafaf0; color: var(--ok); }
+  .feedback.ng { background: #fdecec; color: #a33; }
+  .feedback .hint {
+    display: block;
+    margin-top: 6px;
+    color: #8a5a00;
+    background: #fff6e0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .result-score {
+    text-align: center;
+    font-size: 40px;
+    font-weight: bold;
+    color: var(--main-dark);
+    margin: 10px 0 4px;
+  }
+  .result-sub { text-align: center; color: var(--sub); font-size: 13px; margin-bottom: 16px; }
+  .miss-item {
+    border-left: 4px solid var(--ng);
+    background: #fff9f9;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .miss-item .q { font-weight: bold; margin-bottom: 3px; }
+  .miss-item .ans { color: var(--sub); }
+  .miss-item .hint { color: #8a5a00; margin-top: 4px; }
+  .top-weak {
+    font-size: 12px;
+    color: var(--ng);
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .center-note { text-align: center; font-size: 12px; color: var(--sub); margin-top: 10px; }
+  .fraction-hint { font-size: 12px; color: var(--sub); margin-top: 6px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============ ユーティリティ ============ */
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { const t = b; b = a % b; a = t; } return a || 1; }
+  function reduceFrac(n, d) { const g = gcd(n, d); return [n / g, d / g]; }
+
+  function noCarryAdd(a, b) {
+    const sa = String(a), sb = String(b);
+    const len = Math.max(sa.length, sb.length);
+    const pa = sa.padStart(len, '0'), pb = sb.padStart(len, '0');
+    let res = '';
+    for (let i = 0; i < len; i++) res += (parseInt(pa[i]) + parseInt(pb[i])) % 10;
+    return parseInt(res, 10);
+  }
+  function noBorrowSub(a, b) {
+    const sa = String(a), sb = String(b);
+    const len = Math.max(sa.length, sb.length);
+    const pa = sa.padStart(len, '0'), pb = sb.padStart(len, '0');
+    let res = '';
+    for (let i = 0; i < len; i++) res += Math.abs(parseInt(pa[i]) - parseInt(pb[i]));
+    return parseInt(res, 10);
+  }
+  function noCarryMulBy1Digit(a, m) {
+    const sa = String(a);
+    let res = '';
+    for (let i = 0; i < sa.length; i++) res += (parseInt(sa[i]) * m) % 10;
+    return parseInt(res, 10);
+  }
+
+  /* ============ 問題生成: 各分野 ============ */
+  function genAddSub() {
+    const lvl = randInt(1, 3);
+    const digits = lvl === 1 ? 2 : lvl === 2 ? 3 : 4;
+    const min = Math.pow(10, digits - 1), max = Math.pow(10, digits) - 1;
+    const op = Math.random() < 0.5 ? '+' : '-';
+    let a = randInt(min, max), b = randInt(min, max);
+    if (op === '-' && b > a) { const t = a; a = b; b = t; }
+    const answer = op === '+' ? a + b : a - b;
+    return {
+      category: 'addsub', inputType: 'number',
+      text: a + ' ' + op + ' ' + b,
+      answer: answer,
+      checkMistake: function (user) {
+        if (user === answer) return null;
+        if (op === '+' && user === noCarryAdd(a, b)) return 'くり上がりを忘れていませんか？各位の計算を下からもう一度。';
+        if (op === '-' && user === noBorrowSub(a, b)) return 'くり下がり(上の位から借りてくる計算)を忘れていませんか？';
+        if (answer !== 0 && (user - answer) % 10 === 0) return '位がひとつズレていませんか？もう一度筆算してみよう。';
+        return null;
+      }
+    };
+  }
+
+  function genMulDiv() {
+    const lvl = randInt(1, 3);
+    if (lvl < 3) {
+      const digits = lvl === 1 ? 2 : 3;
+      const min = Math.pow(10, digits - 1), max = Math.pow(10, digits) - 1;
+      const a = randInt(min, max);
+      const m = randInt(2, 9);
+      const answer = a * m;
+      return {
+        category: 'muldiv', inputType: 'number',
+        text: a + ' × ' + m,
+        answer: answer,
+        checkMistake: function (user) {
+          if (user === answer) return null;
+          if (user === noCarryMulBy1Digit(a, m)) return 'くり上がった数を次の位にたし忘れていませんか？';
+          if (user === answer * 10 || user === answer / 10) return '位がズレています。もう一度筆算してみよう。';
+          return null;
+        }
+      };
+    } else {
+      const m = randInt(2, 9);
+      const quotient = randInt(11, 99);
+      const a = quotient * m;
+      return {
+        category: 'muldiv', inputType: 'number',
+        text: a + ' ÷ ' + m,
+        answer: quotient,
+        checkMistake: function (user) {
+          if (user === quotient) return null;
+          if (user === quotient * 10 || user === quotient / 10) return '商の位がズレていませんか？0のつけ忘れ・つけすぎに注意。';
+          return null;
+        }
+      };
+    }
+  }
+
+  function genDecimal() {
+    const lvl = randInt(1, 2);
+    const decA = lvl === 1 ? 1 : 2;
+    const decB = lvl === 1 ? 1 : (Math.random() < 0.5 ? 1 : 2);
+    const op = Math.random() < 0.5 ? '+' : '-';
+    let a = randInt(10, 999) / Math.pow(10, decA);
+    let b = randInt(10, 999) / Math.pow(10, decB);
+    if (op === '-' && b > a) { const t = a; a = b; b = t; }
+    const scale = Math.pow(10, Math.max(decA, decB));
+    const answer = Math.round((op === '+' ? a + b : a - b) * scale) / scale;
+    return {
+      category: 'decimal', inputType: 'decimal',
+      text: a + ' ' + op + ' ' + b,
+      answer: answer,
+      checkMistake: function (user) {
+        if (Math.abs(user - answer) < 1e-9) return null;
+        if (Math.abs(user - answer * 10) < 1e-9 || Math.abs(user - answer / 10) < 1e-9) return '小数点の位置がズレていませんか？位をそろえて筆算してみよう。';
+        return null;
+      }
+    };
+  }
+
+  function genFraction() {
+    const lvl = randInt(1, 2);
+    const dens = lvl === 1 ? [2, 3, 4, 5, 6] : [2, 3, 4, 5, 6, 7, 8, 9, 10, 12];
+    let d1 = dens[randInt(0, dens.length - 1)];
+    let d2 = dens[randInt(0, dens.length - 1)];
+    while (d2 === d1) d2 = dens[randInt(0, dens.length - 1)];
+    let n1 = randInt(1, d1 - 1);
+    let n2 = randInt(1, d2 - 1);
+    const op = Math.random() < 0.5 ? '+' : '-';
+    const lcm = (d1 * d2) / gcd(d1, d2);
+    let num1 = n1 * (lcm / d1), num2 = n2 * (lcm / d2);
+    if (op === '-' && num2 > num1) {
+      let t;
+      t = n1; n1 = n2; n2 = t;
+      t = d1; d1 = d2; d2 = t;
+      t = num1; num1 = num2; num2 = t;
+    }
+    const rawNum = op === '+' ? num1 + num2 : num1 - num2;
+    const reduced = reduceFrac(rawNum, lcm);
+    const ansN = reduced[0], ansD = reduced[1];
+    const wrongNum = op === '+' ? n1 + n2 : n1 - n2;
+    const wrongDen = d1 + d2;
+    return {
+      category: 'fraction', inputType: 'fraction',
+      text: n1 + '/' + d1 + ' ' + op + ' ' + n2 + '/' + d2,
+      answer: ansN + '/' + ansD,
+      checkMistake: function (userStr) {
+        const m = String(userStr).match(/^(-?\d+)\s*\/\s*(\d+)$/);
+        if (!m) return null;
+        const un = parseInt(m[1], 10), ud = parseInt(m[2], 10);
+        if (un * ansD === ansN * ud) {
+          if (gcd(un, ud) !== 1 && ud !== 1) return '約分を忘れていませんか？これ以上小さくできるよ。';
+          return null;
+        }
+        if (un === wrongNum && ud === wrongDen) return '通分してから計算した？分母同士をそのまま足してはダメだよ。';
+        return null;
+      }
+    };
+  }
+
+  function genPercent() {
+    const typeA = Math.random() < 0.5;
+    if (typeA) {
+      const base = randInt(1, 50) * 20;
+      const pcts = [10, 20, 25, 30, 40, 50, 75];
+      const pct = pcts[randInt(0, pcts.length - 1)];
+      const answer = base * pct / 100;
+      return {
+        category: 'percent', inputType: 'decimal',
+        text: base + '円の' + pct + '%はいくら？',
+        answer: answer,
+        checkMistake: function (user) {
+          if (user === answer) return null;
+          if (answer !== 0 && (user === answer * 100 || user === answer / 100)) return '100をかける・わるのを逆にしていませんか？';
+          return null;
+        }
+      };
+    } else {
+      const wholes = [20, 25, 40, 50, 80, 100];
+      const whole = wholes[randInt(0, wholes.length - 1)];
+      const divisors = [2, 4, 5, 8, 10, 20];
+      const part = Math.round(whole / divisors[randInt(0, divisors.length - 1)] * randInt(1, 3));
+      const p = Math.min(part, whole - 1) || 1;
+      const answer = Math.round(p / whole * 100);
+      return {
+        category: 'percent', inputType: 'number',
+        text: whole + '人中' + p + '人は何%？',
+        answer: answer,
+        checkMistake: function (user) {
+          if (user === answer) return null;
+          if (answer !== 0 && (user === answer * 100 || user === answer / 100)) return '100をかけ忘れていませんか？';
+          return null;
+        }
+      };
+    }
+  }
+
+  function genUnit() {
+    const pairs = [
+      { from: 'cm', to: 'm', factor: 100 },
+      { from: 'm', to: 'cm', factor: 1 / 100 },
+      { from: 'g', to: 'kg', factor: 1000 },
+      { from: 'kg', to: 'g', factor: 1 / 1000 },
+      { from: 'mL', to: 'L', factor: 1000 },
+      { from: 'L', to: 'mL', factor: 1 / 1000 },
+      { from: 'mm', to: 'cm', factor: 10 },
+      { from: '分', to: '時間', factor: 60 }
+    ];
+    const p = pairs[randInt(0, pairs.length - 1)];
+    const isDividing = p.factor > 1;
+    const value = isDividing ? randInt(1, 20) * p.factor : randInt(1, 50) * 10;
+    const answerRaw = value / p.factor;
+    const answer = Math.round(answerRaw * 1000) / 1000;
+    return {
+      category: 'unit', inputType: 'decimal',
+      text: value + p.from + ' は 何' + p.to + '？',
+      answer: answer,
+      checkMistake: function (user) {
+        if (Math.abs(user - answer) < 1e-9) return null;
+        if (Math.abs(user - answer * p.factor) < 1e-9 || Math.abs(user - answer / p.factor) < 1e-9) return 'かける・わるを逆にしていませんか？';
+        return null;
+      }
+    };
+  }
+
+  const CATEGORIES = [
+    { id: 'addsub', label: 'たし算・ひき算\n(筆算)', emoji: '➕', gen: genAddSub },
+    { id: 'muldiv', label: 'かけ算・わり算', emoji: '✖️', gen: genMulDiv },
+    { id: 'decimal', label: '小数の計算', emoji: '🔢', gen: genDecimal },
+    { id: 'fraction', label: '分数の計算', emoji: '🍰', gen: genFraction },
+    { id: 'percent', label: '割合・%', emoji: '📊', gen: genPercent },
+    { id: 'unit', label: '単位の変換', emoji: '📏', gen: genUnit }
+  ];
+  const CATMAP = {};
+  CATEGORIES.forEach(function (c) { CATMAP[c.id] = c; });
+
+  function genOne(catId) {
+    return CATMAP[catId].gen();
+  }
+
+  /* ============ 成績の保存(苦手分野の把握) ============ */
+  const STORAGE_KEY = 'ukkari_zero_stats_v1';
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    const init = {};
+    CATEGORIES.forEach(function (c) { init[c.id] = { total: 0, miss: 0 }; });
+    return init;
+  }
+  function saveStats(stats) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stats)); } catch (e) {}
+  }
+  let stats = loadStats();
+
+  function weakestCategoryId() {
+    let worst = null, worstRate = -1;
+    CATEGORIES.forEach(function (c) {
+      const s = stats[c.id] || { total: 0, miss: 0 };
+      if (s.total >= 4) {
+        const rate = s.miss / s.total;
+        if (rate > worstRate) { worstRate = rate; worst = c.id; }
+      }
+    });
+    return worstRate >= 0.3 ? worst : null;
+  }
+
+  /* ============ アプリの状態 ============ */
+  const state = {
+    screen: 'home',
+    selectedCats: [],
+    count: 10,
+    questions: [],
+    idx: 0,
+    correctCount: 0,
+    missed: [],
+    answered: false,
+    lastMistakeMsg: null,
+    lastCorrect: null
+  };
+
+  const app = document.getElementById('app');
+
+  /* ============ 描画: ホーム画面 ============ */
+  function renderHome() {
+    const weakId = weakestCategoryId();
+    let html = '';
+    html += '<h1>うっかりゼロ計算道場</h1>';
+    html += '<div class="subtitle">5年生の「わかってたのに間違えた」をなくす計算トレーニング</div>';
+
+    html += '<div class="card checklist">';
+    html += '<div class="checklist-title">✅ とく前のみなおしチェック</div>';
+    html += '<ul>';
+    html += '<li>くり上がり・くり下がりを確認した？</li>';
+    html += '<li>小数点の位置は合ってる？</li>';
+    html += '<li>分数は通分・約分をした？</li>';
+    html += '<li>単位はそろっている？</li>';
+    html += '<li>最後にもう一度計算し直した？</li>';
+    html += '</ul></div>';
+
+    if (weakId) {
+      html += '<div class="top-weak">📌 最近「' + CATMAP[weakId].label.replace('\n', '') + '」で間違いが多いよ。重点的に練習してみよう！</div>';
+    }
+
+    html += '<div class="card">';
+    html += '<div class="checklist-title">分野をえらぼう(複数選択OK)</div>';
+    html += '<div class="cat-grid">';
+    CATEGORIES.forEach(function (c) {
+      const sel = state.selectedCats.indexOf(c.id) >= 0;
+      const s = stats[c.id] || { total: 0, miss: 0 };
+      let badge = '';
+      if (s.total >= 4 && s.miss / s.total >= 0.3) badge = '<span class="weak-badge">苦手かも</span>';
+      html += '<div class="cat-btn' + (sel ? ' selected' : '') + '" data-cat="' + c.id + '">' +
+        '<span class="emoji">' + c.emoji + '</span>' + c.label.replace('\n', '<br>') + '<br>' + badge + '</div>';
+    });
+    html += '</div>';
+
+    html += '<div class="checklist-title" style="margin-top:14px;">問題数</div>';
+    html += '<div class="count-row">';
+    [5, 10, 20].forEach(function (n) {
+      html += '<div class="count-btn' + (state.count === n ? ' selected' : '') + '" data-count="' + n + '">' + n + '問</div>';
+    });
+    html += '</div>';
+
+    html += '<button class="big-btn" id="startBtn"' + (state.selectedCats.length === 0 ? ' disabled' : '') + '>スタート</button>';
+    html += '</div>';
+
+    app.innerHTML = html;
+
+    document.querySelectorAll('.cat-btn').forEach(function (el) {
+      el.addEventListener('click', function () {
+        const id = el.getAttribute('data-cat');
+        const i = state.selectedCats.indexOf(id);
+        if (i >= 0) state.selectedCats.splice(i, 1); else state.selectedCats.push(id);
+        renderHome();
+      });
+    });
+    document.querySelectorAll('.count-btn').forEach(function (el) {
+      el.addEventListener('click', function () {
+        state.count = parseInt(el.getAttribute('data-count'), 10);
+        renderHome();
+      });
+    });
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) startBtn.addEventListener('click', function () { startQuiz(false); });
+  }
+
+  function startQuiz(onlyMissed) {
+    let pool;
+    if (onlyMissed && state.missed.length > 0) {
+      pool = state.missed.map(function (m) { return m.catId; });
+    } else {
+      pool = state.selectedCats.slice();
+    }
+    const total = onlyMissed ? pool.length : state.count;
+    const qs = [];
+    for (let i = 0; i < total; i++) {
+      qs.push(genOne(pool[randInt(0, pool.length - 1)]));
+    }
+    state.questions = qs;
+    state.idx = 0;
+    state.correctCount = 0;
+    state.missed = [];
+    state.answered = false;
+    state.screen = 'quiz';
+    renderQuiz();
+  }
+
+  /* ============ 描画: 出題画面 ============ */
+  function renderQuiz() {
+    const q = state.questions[state.idx];
+    const pct = Math.round((state.idx) / state.questions.length * 100);
+    let html = '';
+    html += '<div class="progress-wrap"><span>' + (state.idx + 1) + ' / ' + state.questions.length + '問目</span>' +
+      '<span>正解 ' + state.correctCount + '</span></div>';
+    html += '<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:' + pct + '%"></div></div>';
+
+    html += '<div class="card question-box">';
+    html += '<div class="question-text">' + q.text + ' = ?</div>';
+
+    let placeholder = '答え';
+    if (q.inputType === 'fraction') placeholder = '例: 3/4';
+    if (q.inputType === 'decimal') placeholder = '例: 12.5';
+
+    html += '<input class="answer-input" id="answerInput" type="text" inputmode="' + (q.inputType === 'fraction' ? 'text' : 'decimal') + '" placeholder="' + placeholder + '" autocomplete="off">';
+    if (q.inputType === 'fraction') html += '<div class="fraction-hint">分子/分母 の形で入力してね</div>';
+
+    html += '<div id="feedbackArea"></div>';
+
+    if (!state.answered) {
+      html += '<button class="big-btn" id="submitBtn">こたえる</button>';
+    } else {
+      html += '<button class="big-btn" id="nextBtn">' + (state.idx + 1 < state.questions.length ? 'つぎへ' : 'けっかを見る') + '</button>';
+    }
+    html += '</div>';
+
+    app.innerHTML = html;
+
+    const input = document.getElementById('answerInput');
+    input.focus();
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        if (!state.answered) submitAnswer(); else goNext();
+      }
+    });
+
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) submitBtn.addEventListener('click', submitAnswer);
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) nextBtn.addEventListener('click', goNext);
+  }
+
+  function parseUserAnswer(q, raw) {
+    const t = raw.trim();
+    if (q.inputType === 'fraction') return t;
+    if (t === '') return NaN;
+    return parseFloat(t.replace(/,/g, ''));
+  }
+
+  function isCorrect(q, userVal) {
+    if (q.inputType === 'fraction') {
+      const m = String(userVal).match(/^(-?\d+)\s*\/\s*(\d+)$/);
+      if (m) {
+        const un = parseInt(m[1], 10), ud = parseInt(m[2], 10);
+        const parts = q.answer.split('/').map(Number);
+        return un * parts[1] === parts[0] * ud;
+      }
+      const asNum = parseFloat(userVal);
+      const parts2 = q.answer.split('/').map(Number);
+      return !isNaN(asNum) && Math.abs(asNum - parts2[0] / parts2[1]) < 1e-9;
+    }
+    if (typeof userVal !== 'number' || isNaN(userVal)) return false;
+    return Math.abs(userVal - q.answer) < 1e-9;
+  }
+
+  function submitAnswer() {
+    const q = state.questions[state.idx];
+    const raw = document.getElementById('answerInput').value;
+    const userVal = parseUserAnswer(q, raw);
+    const correct = isCorrect(q, userVal);
+    const input = document.getElementById('answerInput');
+    input.classList.add(correct ? 'correct' : 'wrong');
+    input.disabled = true;
+
+    const s = stats[q.category] || { total: 0, miss: 0 };
+    s.total++;
+    if (!correct) s.miss++;
+    stats[q.category] = s;
+    saveStats(stats);
+
+    const feedbackArea = document.getElementById('feedbackArea');
+    let mistakeMsg = null;
+    if (!correct) {
+      mistakeMsg = q.checkMistake(userVal);
+      state.missed.push({ catId: q.category, text: q.text, correctAns: q.answer, userAns: raw, hint: mistakeMsg });
+    } else {
+      state.correctCount++;
+    }
+
+    let fb = '<div class="feedback ' + (correct ? 'ok' : 'ng') + '">';
+    fb += correct ? '⭕ 正解！' : '❌ 残念。正しい答えは <b>' + q.answer + '</b>';
+    if (!correct && mistakeMsg) fb += '<span class="hint">💡 ' + mistakeMsg + '</span>';
+    fb += '</div>';
+    feedbackArea.innerHTML = fb;
+
+    state.answered = true;
+    renderQuizButtons();
+  }
+
+  function renderQuizButtons() {
+    const q = state.questions[state.idx];
+    const box = document.querySelector('.question-box');
+    let btn = document.getElementById('submitBtn');
+    if (btn) btn.remove();
+    const b = document.createElement('button');
+    b.className = 'big-btn';
+    b.id = 'nextBtn';
+    b.textContent = state.idx + 1 < state.questions.length ? 'つぎへ' : 'けっかを見る';
+    b.addEventListener('click', goNext);
+    box.appendChild(b);
+  }
+
+  function goNext() {
+    if (state.idx + 1 < state.questions.length) {
+      state.idx++;
+      state.answered = false;
+      renderQuiz();
+    } else {
+      state.screen = 'result';
+      renderResult();
+    }
+  }
+
+  /* ============ 描画: 結果画面 ============ */
+  function renderResult() {
+    const total = state.questions.length;
+    const correct = state.correctCount;
+    let html = '';
+    html += '<h1>けっか</h1>';
+    html += '<div class="card">';
+    html += '<div class="result-score">' + correct + ' / ' + total + '</div>';
+    html += '<div class="result-sub">' + (correct === total ? '満点！うっかりゼロ達成🎉' : 'まちがえた問題をチェックしよう') + '</div>';
+
+    if (state.missed.length > 0) {
+      html += '<div class="checklist-title">まちがえた問題</div>';
+      state.missed.forEach(function (m) {
+        html += '<div class="miss-item">';
+        html += '<div class="q">' + m.text + ' = ' + m.correctAns + '</div>';
+        html += '<div class="ans">あなたの答え: ' + (m.userAns === '' ? '(未回答)' : m.userAns) + '</div>';
+        if (m.hint) html += '<div class="hint">💡 ' + m.hint + '</div>';
+        html += '</div>';
+      });
+    }
+
+    if (state.missed.length > 0) {
+      html += '<button class="big-btn" id="retryMissBtn">まちがえた問題だけもう一度</button>';
+    }
+    html += '<button class="big-btn secondary" id="homeBtn">ホームに戻る</button>';
+    html += '</div>';
+
+    app.innerHTML = html;
+
+    const retryBtn = document.getElementById('retryMissBtn');
+    if (retryBtn) retryBtn.addEventListener('click', function () { startQuiz(true); });
+    document.getElementById('homeBtn').addEventListener('click', function () {
+      state.screen = 'home';
+      renderHome();
+    });
+  }
+
+  renderHome();
+})();
+</script>
+</body>
+</html>
